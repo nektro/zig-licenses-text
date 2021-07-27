@@ -2,9 +2,9 @@ const std = @import("std");
 const licenses = @import("./lib.zig");
 
 pub fn main() !void {
-    inline for (std.meta.declarations(licenses.spdx)) |item| {
-        std.log.info("{s}", .{item.name});
+    for (licenses.spdx) |item| {
+        std.log.info("{s}", .{item[0]});
     }
 
-    std.debug.print("\n{s}\n", .{licenses.spdx.@"MIT"});
+    std.debug.print("\n{s}\n", .{licenses.find("MIT")});
 }

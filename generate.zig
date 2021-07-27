@@ -19,11 +19,26 @@ pub fn main() !void {
     try w.print("// Last generated from version {s}\n", .{val.get("licenseListVersion").?.String});
     try w.writeAll("//\n");
 
+    try w.writeAll("\n");
+    try w.writeAll(
+        \\const std = @import("std");
+        \\
+        \\pub fn find(name: []const u8) ?[]const u8 {
+        \\    for (spdx) |item| {
+        \\        if (std.mem.eql(u8, item[0], name)) {
+        \\            return item[1];
+        \\        }
+        \\    }
+        \\    return null;
+        \\}
+        \\
+    );
+
     var licenses = val.get("licenses").?.Array;
     std.sort.sort(json.Value, licenses, {}, spdxlicenseLessThan);
 
     try w.writeAll("\n");
-    try w.writeAll("pub const spdx = struct {\n");
+    try w.writeAll("pub const spdx = [_][2][]const u8{\n");
     for (licenses) |lic| {
         std.debug.print("|", .{});
         const licID = lic.get("licenseId").?.String;
@@ -42,7 +57,7 @@ pub fn main() !void {
         fulltext = try std.mem.replaceOwned(u8, aalloc, fulltext, "\\u003e", ">");
         fulltext = try std.mem.replaceOwned(u8, aalloc, fulltext, "\\u2028", "\\n");
 
-        try w.print("    pub const @\"{s}\" = \"{s}\";\n", .{ licID, fulltext });
+        try w.print("    .{{ \"{s}\", \"{s}\" }},\n", .{ licID, fulltext });
     }
     try w.writeAll("};\n");
     std.debug.print("\n", .{});
