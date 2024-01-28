@@ -3,32 +3,37 @@ const deps = @import("./deps.zig");
 
 pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
+    const mode = b.option(std.builtin.Mode, "mode", "") orelse .Debug;
 
-    const mode = b.standardReleaseOptions();
+    const exe = b.addExecutable(.{
+        .name = "zig-licenses",
+        .root_source_file = .{ .path = "src/main.zig" },
+        .target = target,
+        .optimize = mode,
+    });
+    b.installArtifact(exe);
 
-    const exe = b.addExecutable("zig-licenses", "src/main.zig");
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.install();
-
-    const run_cmd = exe.run();
+    const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step("test", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
     //
 
-    const exe2 = b.addExecutable("generate", "generate.zig");
-    exe2.setTarget(target);
-    exe2.setBuildMode(mode);
+    const exe2 = b.addExecutable(.{
+        .name = "generate",
+        .root_source_file = .{ .path = "generate.zig" },
+        .target = target,
+        .optimize = mode,
+    });
     deps.addAllTo(exe2);
-    exe2.install();
+    b.installArtifact(exe2);
 
-    const run_cmd2 = exe2.run();
+    const run_cmd2 = b.addRunArtifact(exe2);
     run_cmd2.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_cmd2.addArgs(args);
