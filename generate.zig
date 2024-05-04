@@ -6,7 +6,7 @@ const json = @import("json");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = &gpa.allocator;
+    const alloc = gpa.allocator();
 
     const f = try std.fs.cwd().createFile("src/lib.zig", .{});
     const w = f.writer();
@@ -63,7 +63,7 @@ pub fn main() !void {
     std.debug.print("\n", .{});
 }
 
-pub fn simple_fetch(alloc: *std.mem.Allocator, url: []const u8) !json.Value {
+pub fn simple_fetch(alloc: std.mem.Allocator, url: []const u8) !json.Value {
     const req = try zfetch.Request.init(alloc, url, null);
     defer req.deinit();
     try req.do(.GET, null, null);
