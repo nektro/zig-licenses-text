@@ -1,4 +1,6 @@
-zig-*
+zig-cache
+.zig-cache
+zig-out
 deps.zig
 .zigmod
 zigmod.lock
