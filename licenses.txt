@@ -5,5 +5,10 @@ MIT:
 - git https://github.com/nektro/iguanaTLS
 - git https://github.com/nektro/zig-extras
 - git https://github.com/nektro/zig-json
+- git https://github.com/nektro/zig-tracer
 - git https://github.com/truemedian/hzzp
 - git https://github.com/truemedian/zfetch
+
+MPL-2.0:
+= https://spdx.org/licenses/MPL-2.0
+- git https://github.com/nektro/zig-intrusive-parser
