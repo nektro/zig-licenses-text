@@ -5,5 +5,4 @@ license: MIT
 description: Full license text data for https://spdx.org/licenses/
 
 dev_dependencies:
-  - src: git https://github.com/truemedian/zfetch
   - src: git https://github.com/nektro/zig-json

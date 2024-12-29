@@ -1,7 +1,6 @@
 //! Run this with `zig build gen`
 
 const std = @import("std");
-const zfetch = @import("zfetch");
 const json = @import("json");
 
 pub fn main() !void {
@@ -12,11 +11,13 @@ pub fn main() !void {
     const w = f.writer();
 
     std.log.info("spdx", .{});
-    const val = try simple_fetch(alloc, "https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json");
+    const doc = try simple_fetch(alloc, "https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json");
+    defer doc.deinit(alloc);
+    const val = doc.root.object();
 
     try w.writeAll("// SPDX License Text data generated from https://github.com/spdx/license-list-data\n");
     try w.writeAll("//\n");
-    try w.print("// Last generated from version {s}\n", .{val.get("licenseListVersion").?.String});
+    try w.print("// Last generated from version {s}\n", .{val.getS("licenseListVersion").?});
     try w.writeAll("//\n");
 
     try w.writeAll("\n");
@@ -34,22 +35,25 @@ pub fn main() !void {
         \\
     );
 
-    var licenses = val.get("licenses").?.Array;
-    std.sort.sort(json.Value, licenses, {}, spdxlicenseLessThan);
+    const licenses = try mutdupe(alloc, json.ValueIndex, val.getA("licenses").?);
+    defer alloc.free(licenses);
+    std.mem.sort(json.ValueIndex, licenses, {}, spdxlicenseLessThan);
 
     try w.writeAll("\n");
     try w.writeAll("pub const spdx = [_][2][]const u8{\n");
     for (licenses) |lic| {
         std.debug.print("|", .{});
-        const licID = lic.get("licenseId").?.String;
+        const licID = lic.object().getS("licenseId").?;
 
         var arena = std.heap.ArenaAllocator.init(alloc);
         defer arena.deinit();
-        const aalloc = &arena.allocator;
+        const aalloc = arena.allocator();
 
         const innerurl = try std.fmt.allocPrint(aalloc, "https://spdx.org/licenses/{s}.json", .{licID});
-        const innerval = try simple_fetch(aalloc, innerurl);
-        var fulltext = (innerval.get("licenseText") orelse json.Value{ .String = "" }).String;
+        const innerdoc = try simple_fetch(aalloc, innerurl);
+        defer innerdoc.deinit(aalloc);
+        const innerval = innerdoc.root.object();
+        var fulltext = innerval.getS("licenseText") orelse "";
         fulltext = try std.mem.replaceOwned(u8, aalloc, fulltext, "\\u0026", "&");
         fulltext = try std.mem.replaceOwned(u8, aalloc, fulltext, "\\u0027", "'");
         fulltext = try std.mem.replaceOwned(u8, aalloc, fulltext, "\\u003c", "<");
@@ -63,22 +67,31 @@ pub fn main() !void {
     std.debug.print("\n", .{});
 }
 
-pub fn simple_fetch(alloc: std.mem.Allocator, url: []const u8) !json.Value {
-    const req = try zfetch.Request.init(alloc, url, null);
-    defer req.deinit();
-    try req.do(.GET, null, null);
-    if (req.status.code != 200) return json.Value{
-        .Object = &.{},
-    };
-    const r = req.reader();
-    const body_content = try r.readAllAlloc(alloc, std.math.maxInt(usize));
-    const val = try json.parse(alloc, body_content);
-    return val;
+pub fn simple_fetch(alloc: std.mem.Allocator, url: []const u8) !json.Document {
+    var client = std.http.Client{ .allocator = alloc };
+    defer client.deinit();
+
+    var list = std.ArrayList(u8).init(alloc);
+    defer list.deinit();
+
+    const fetch = try client.fetch(.{
+        .location = .{ .url = url },
+        .response_storage = .{ .dynamic = &list },
+    });
+    const opts = json.Parser.Options{ .maximum_depth = 100, .support_trailing_commas = true };
+    if (fetch.status != .ok) return try json.parseFromSlice(alloc, url, "{}", opts);
+    return try json.parseFromSlice(alloc, url, list.items, opts);
 }
 
-fn spdxlicenseLessThan(context: void, lhs: json.Value, rhs: json.Value) bool {
+fn spdxlicenseLessThan(context: void, lhs: json.ValueIndex, rhs: json.ValueIndex) bool {
     _ = context;
-    const l = lhs.get("licenseId").?.String;
-    const r = rhs.get("licenseId").?.String;
+    const l = lhs.object().getS("licenseId").?;
+    const r = rhs.object().getS("licenseId").?;
     return std.mem.lessThan(u8, l, r);
+}
+
+fn mutdupe(alloc: std.mem.Allocator, comptime T: type, original: anytype) ![]T {
+    const slice = try alloc.alloc(T, original.len);
+    for (original, 0..) |item, i| slice[i] = item;
+    return slice;
 }

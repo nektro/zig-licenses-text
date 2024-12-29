@@ -6,5 +6,5 @@ pub fn main() !void {
         std.log.info("{s}", .{item[0]});
     }
 
-    std.debug.print("\n{s}\n", .{licenses.find("MIT")});
+    std.debug.print("\n{?s}\n", .{licenses.find("MIT")});
 }

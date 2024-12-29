@@ -1,16 +1,17 @@
 const std = @import("std");
 const deps = @import("./deps.zig");
 
-pub fn build(b: *std.build.Builder) void {
+pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const mode = b.option(std.builtin.Mode, "mode", "") orelse .Debug;
 
     const exe = b.addExecutable(.{
-        .name = "zig-licenses",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .name = "zig-licenses-text",
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = mode,
     });
+    deps.addAllTo(exe);
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
@@ -19,14 +20,14 @@ pub fn build(b: *std.build.Builder) void {
         run_cmd.addArgs(args);
     }
 
-    const run_step = b.step("test", "Run the app");
+    const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
     //
 
     const exe2 = b.addExecutable(.{
         .name = "generate",
-        .root_source_file = .{ .path = "generate.zig" },
+        .root_source_file = b.path("generate.zig"),
         .target = target,
         .optimize = mode,
     });
