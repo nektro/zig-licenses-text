@@ -42,4 +42,17 @@ pub fn build(b: *std.Build) void {
 
     const run_step2 = b.step("gen", "generate the list");
     run_step2.dependOn(&run_cmd2.step);
+
+    const tests = b.addTest(.{
+        .root_source_file = b.path("test.zig"),
+        .target = target,
+        .optimize = mode,
+    });
+    deps.addAllTo(tests);
+
+    const test_step = b.step("test", "Run all library tests");
+    const tests_run = b.addRunArtifact(tests);
+    tests_run.has_side_effects = true;
+    test_step.dependOn(&tests_run.step);
+    test_step.dependOn(&exe2.step);
 }
