@@ -6,3 +6,4 @@ description: Full license text data for https://spdx.org/licenses/
 root_dependencies:
   - src: git https://github.com/nektro/zig-expect
   - src: git https://github.com/nektro/zig-json
+  - src: git https://github.com/nektro/zig-nfs

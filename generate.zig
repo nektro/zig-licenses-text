@@ -2,13 +2,14 @@
 
 const std = @import("std");
 const json = @import("json");
+const nfs = @import("nfs");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc = gpa.allocator();
 
-    const f = try std.fs.cwd().createFile("src/lib.zig", .{});
-    const w = f.writer();
+    const f = try nfs.cwd().createFile("src/lib.zig", .{});
+    const w = f;
 
     std.log.info("spdx", .{});
     const doc = try simple_fetch(alloc, "https://raw.githubusercontent.com/spdx/license-list-data/master/json/licenses.json");
@@ -71,16 +72,16 @@ pub fn simple_fetch(alloc: std.mem.Allocator, url: []const u8) !json.Document {
     var client = std.http.Client{ .allocator = alloc };
     defer client.deinit();
 
-    var list = std.ArrayList(u8).init(alloc);
+    var list = std.Io.Writer.Allocating.init(alloc);
     defer list.deinit();
 
     const fetch = try client.fetch(.{
         .location = .{ .url = url },
-        .response_storage = .{ .dynamic = &list },
+        .response_writer = &list.writer,
     });
     const opts = json.Parser.Options{ .maximum_depth = 100, .support_trailing_commas = true };
     if (fetch.status != .ok) return try json.parseFromSlice(alloc, url, "{}", opts);
-    return try json.parseFromSlice(alloc, url, list.items, opts);
+    return try json.parseFromSlice(alloc, url, list.written(), opts);
 }
 
 fn spdxlicenseLessThan(context: void, lhs: json.ValueIndex, rhs: json.ValueIndex) bool {
