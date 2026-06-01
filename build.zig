@@ -15,6 +15,7 @@ pub fn build(b: *std.Build) void {
         }),
     });
     deps.addAllTo(exe2);
+    exe2.linkLibC();
     exe2.use_llvm = !disable_llvm;
     exe2.use_lld = !disable_llvm;
     b.installArtifact(exe2);
