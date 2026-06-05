@@ -5,7 +5,7 @@ const json = @import("json");
 const nfs = @import("nfs");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     const alloc = gpa.allocator();
 
     const f = try nfs.cwd().createFile("src/lib.zig", .{});
@@ -69,7 +69,8 @@ pub fn main() !void {
 }
 
 pub fn simple_fetch(alloc: std.mem.Allocator, url: []const u8) !json.Document {
-    var client = std.http.Client{ .allocator = alloc };
+    const io = std.Options.debug_io;
+    var client = std.http.Client{ .allocator = alloc, .io = io };
     defer client.deinit();
 
     var list = std.Io.Writer.Allocating.init(alloc);
