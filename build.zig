@@ -3,7 +3,7 @@ const deps = @import("./deps.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const mode = b.option(std.builtin.OptimizeMode, "mode", "") orelse .Debug;
+    const optimize = b.standardOptimizeOption(.{});
     const disable_llvm = b.option(bool, "disable_llvm", "use the non-llvm zig codegen") orelse false;
 
     const exe2 = b.addExecutable(.{
@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{
             .root_source_file = b.path("generate.zig"),
             .target = target,
-            .optimize = mode,
+            .optimize = optimize,
         }),
     });
     deps.addAllTo(exe2);
@@ -22,9 +22,7 @@ pub fn build(b: *std.Build) void {
 
     const run_cmd2 = b.addRunArtifact(exe2);
     run_cmd2.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd2.addArgs(args);
-    }
+    run_cmd2.addPassthruArgs();
 
     const run_step2 = b.step("gen", "generate the list");
     run_step2.dependOn(&run_cmd2.step);
@@ -33,7 +31,7 @@ pub fn build(b: *std.Build) void {
         .root_module = b.createModule(.{
             .root_source_file = b.path("test.zig"),
             .target = target,
-            .optimize = mode,
+            .optimize = optimize,
         }),
     });
     deps.addAllTo(tests);
